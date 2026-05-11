@@ -2199,13 +2199,18 @@ func ensureGeminiProjectAndOnboard(ctx context.Context, httpClient *http.Client,
 			return fmt.Errorf("fetch project list: %w", errProjects)
 		}
 		if len(projects) == 0 {
-			return fmt.Errorf("no Google Cloud projects available for this account")
+			// No GCP projects available, but performGeminiCLISetup supports auto-discovery:
+			// it will call onboardUser without a project ID and let Google auto-provision one.
+			log.Info("No GCP projects found; attempting auto-discovery via onboarding")
+			storage.Auto = true
+			trimmedRequest = ""
+		} else {
+			trimmedRequest = strings.TrimSpace(projects[0].ProjectID)
+			if trimmedRequest == "" {
+				return fmt.Errorf("resolved project id is empty")
+			}
+			storage.Auto = true
 		}
-		trimmedRequest = strings.TrimSpace(projects[0].ProjectID)
-		if trimmedRequest == "" {
-			return fmt.Errorf("resolved project id is empty")
-		}
-		storage.Auto = true
 	} else {
 		storage.Auto = false
 	}
